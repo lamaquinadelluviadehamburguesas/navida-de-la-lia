@@ -1,0 +1,130 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function ownsDocument() {
+      return signedIn() && resource.data.uid == request.auth.uid;
+    }
+
+    function imageFitsDocument() {
+      return !request.resource.data.keys().hasAny(['img'])
+        || (request.resource.data.img is string
+          && request.resource.data.img.size() <= 716800);
+    }
+
+    // Existing collections retain their original access policy.
+    match /observations/{observationId} {
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && imageFitsDocument();
+      allow read: if true;
+      allow delete: if ownsDocument();
+      allow update: if ownsDocument()
+        && request.resource.data.uid == request.auth.uid
+        && imageFitsDocument();
+    }
+
+    match /products/{productId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && imageFitsDocument();
+      allow update: if ownsDocument()
+        && request.resource.data.uid == request.auth.uid
+        && imageFitsDocument();
+      allow delete: if ownsDocument();
+    }
+
+    match /plants/{plantId} {
+      allow read: if true;
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && imageFitsDocument();
+      allow update: if ownsDocument()
+        && request.resource.data.uid == request.auth.uid
+        && imageFitsDocument();
+      allow delete: if ownsDocument();
+    }
+
+    function ownsGallery(userId) {
+      return signedIn() && request.auth.uid == userId;
+    }
+
+    function validToken(value) {
+      return value is string && value.matches('^[a-zA-Z0-9_-]{1,180}$');
+    }
+
+    function validMediaMetadata(mediaId) {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'id', 'name', 'type', 'mimeType', 'size', 'source',
+          'chunkCount', 'base64Length', 'uploadToken', 'status',
+          'createdAtMs', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id', 'name', 'type', 'mimeType', 'size', 'source',
+          'chunkCount', 'base64Length', 'uploadToken', 'status',
+          'createdAtMs', 'createdAt', 'deleteToken'
+        ])
+        && validToken(mediaId)
+        && data.id == mediaId
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 1024
+        && data.type in ['image', 'video']
+        && data.mimeType is string
+        && data.mimeType.matches('^' + data.type + '/[a-z0-9][a-z0-9.+-]{0,79}$')
+        && data.size is int && data.size > 0 && data.size <= 20971520
+        && data.source in ['upload', 'builtin']
+        && data.status in ['uploading', 'ready', 'deleting', 'failed']
+        && data.createdAtMs is int && data.createdAtMs >= 0
+        && data.createdAt is timestamp
+        && validToken(data.uploadToken)
+        && (!data.keys().hasAny(['deleteToken']) || validToken(data.deleteToken))
+        && data.base64Length is int
+        && data.base64Length >= 4 && data.base64Length <= 27962028
+        && data.base64Length % 4 == 0
+        && data.base64Length * 3 >= data.size * 4
+        && data.base64Length * 3 <= (data.size + 2) * 4
+        && data.chunkCount is int && data.chunkCount >= 1 && data.chunkCount <= 44
+        && (data.chunkCount - 1) * 650000 < data.base64Length
+        && data.base64Length <= data.chunkCount * 650000;
+    }
+
+    function validDeletedDefault() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['source', 'status', 'deletedAt'])
+        && data.keys().hasOnly(['source', 'status', 'deletedAt'])
+        && data.source == 'builtin'
+        && data.status == 'deleted'
+        && data.deletedAt is timestamp;
+    }
+
+    function validMediaChunk(userId, mediaId) {
+      let data = request.resource.data;
+      let media = get(/databases/$(database)/documents/christmasMedia/$(userId)/files/$(mediaId)).data;
+      return data.keys().hasAll(['index', 'data', 'uploadToken'])
+        && data.keys().hasOnly(['index', 'data', 'uploadToken'])
+        && data.index is int && data.index >= 0 && data.index < 44
+        && data.data is string && data.data.size() > 0 && data.data.size() <= 650000
+        && validToken(data.uploadToken)
+        && media.status == 'uploading'
+        && media.uploadToken == data.uploadToken
+        && data.index < media.chunkCount;
+    }
+
+    match /christmasMedia/{userId}/files/{mediaId} {
+      // Reads of missing documents are allowed for the owner's upload transactions.
+      allow read, delete: if ownsGallery(userId);
+      allow create, update: if ownsGallery(userId)
+        && (validMediaMetadata(mediaId) || validDeletedDefault());
+
+      // Parent rules do not automatically cover this subcollection.
+      match /chunks/{chunkId} {
+        allow read, delete: if ownsGallery(userId);
+        allow create, update: if ownsGallery(userId) && validMediaChunk(userId, mediaId);
+      }
+    }
+  }
+}

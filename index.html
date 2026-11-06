@@ -1,0 +1,102 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#000000">
+  <title>Recuerdos de Navidad · Árbol y galería</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/src/style.css">
+</head>
+<body data-view="tree" data-menu-open="false" data-camera-running="false">
+  <div id="loader">
+    <div class="loader-spinner"></div>
+    <div class="loader-text">Preparando los recuerdos</div>
+  </div>
+
+  <div id="toast" role="status" aria-live="polite">Listo</div>
+  <div id="canvas-container" aria-label="Árbol de Navidad interactivo en tres dimensiones"></div>
+
+  <div id="ui-layer">
+    <h1 class="title">Merry Christmas</h1>
+    <button id="menu-toggle" class="menu-toggle" type="button" aria-label="Abrir menú" aria-expanded="false" aria-controls="controls-menu">
+      <span class="hamburger" aria-hidden="true"><span></span><span></span><span></span></span>
+      <span>Menú</span>
+    </button>
+    <div id="mode-bar" role="group" aria-label="Modo de la escena">
+      <button class="mode-btn active" id="btn-mode-tree" data-mode="TREE" type="button">🎄 Árbol</button>
+      <button class="mode-btn" id="btn-mode-scatter" data-mode="SCATTER" type="button">✨ Dispersar</button>
+      <button class="mode-btn" id="btn-mode-focus" data-mode="FOCUS" type="button">🔍 Enfocar</button>
+    </div>
+  </div>
+
+  <dialog id="controls-menu" class="controls-menu" aria-labelledby="menu-title">
+    <div class="menu-heading">
+      <h2 id="menu-title">Tus recuerdos</h2>
+      <button id="menu-close" type="button" class="icon-btn" aria-label="Cerrar menú">×</button>
+    </div>
+    <nav class="view-navigation" aria-label="Vistas">
+      <a class="control-btn navigation-btn" href="#arbol" id="tree-link" aria-current="page"><span aria-hidden="true">✦</span> Árbol de Navidad</a>
+      <a class="control-btn navigation-btn" href="#galeria" id="gallery-btn"><span aria-hidden="true">▦</span> Galería</a>
+    </nav>
+    <div class="menu-section">
+      <h3>Añadir recuerdos</h3>
+      <button class="control-btn" id="select-folder-btn" type="button" data-open-folder><span aria-hidden="true">▱</span> Seleccionar carpeta</button>
+      <button class="control-btn" id="select-files-btn" type="button" data-open-files><span aria-hidden="true">＋</span> Seleccionar fotos y videos</button>
+      <input type="file" id="folder-input" webkitdirectory directory multiple accept="image/*,video/*" hidden>
+      <input type="file" id="file-input" multiple accept="image/*,video/*" hidden>
+    </div>
+    <div class="menu-section">
+      <h3>Escena</h3>
+      <button class="control-btn" id="cam-btn" type="button">📷 Activar cámara</button>
+      <button class="control-btn" id="audio-btn" type="button">🔔 Sonido</button>
+    </div>
+    <p class="menu-help">Mano abierta: dispersar. Puño: reunir. Pellizco: enfocar una foto.</p>
+    <p class="menu-shortcuts"><kbd>H</kbd> Ocultar interfaz <span>·</span> <kbd>Espacio</kbd> Cambiar modo</p>
+  </dialog>
+
+  <main id="gallery-view" class="gallery-view" hidden>
+    <div class="gallery-content">
+      <header class="gallery-header">
+        <a href="#arbol" class="back-link"><span aria-hidden="true">←</span> Volver al árbol</a>
+        <div class="gallery-intro">
+          <div>
+            <h1 id="gallery-heading" tabindex="-1">Galería</h1>
+            <p>Tus fotos y videos, juntos en un solo lugar.</p>
+          </div>
+          <button class="gallery-upload-btn" type="button" data-open-files><span aria-hidden="true">＋</span> Añadir archivos</button>
+        </div>
+      </header>
+      <div class="gallery-toolbar">
+        <div class="gallery-filters" role="group" aria-label="Filtrar archivos">
+          <button type="button" data-filter="all" aria-pressed="true">Todos <span id="count-all">0</span></button>
+          <button type="button" data-filter="image" aria-pressed="false">Fotos <span id="count-images">0</span></button>
+          <button type="button" data-filter="video" aria-pressed="false">Videos <span id="count-videos">0</span></button>
+        </div>
+        <p id="gallery-count" class="gallery-count">Sin archivos</p>
+      </div>
+      <div id="gallery-status" class="gallery-status" role="status" aria-live="polite">
+        <span id="gallery-status-message">Cargando tus recuerdos…</span>
+        <button id="gallery-retry" type="button" hidden>Reintentar</button>
+      </div>
+      <p id="upload-progress" class="upload-progress" role="status" aria-live="polite" hidden></p>
+      <section id="gallery-grid" class="gallery-grid" aria-label="Fotos y videos"></section>
+      <div id="gallery-empty" class="gallery-empty" hidden>
+        <span aria-hidden="true">✧</span>
+        <h2>Aquí comienzan tus recuerdos</h2>
+        <p>Añade fotos o videos para verlos en tu galería.</p>
+        <button class="gallery-upload-btn" type="button" data-open-files>Añadir archivos</button>
+      </div>
+    </div>
+  </main>
+
+  <div id="webcam-wrapper">
+    <video id="webcam" autoplay playsinline muted></video>
+    <div id="debug-info">Cámara en espera. Actívala desde el menú.</div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
